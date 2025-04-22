@@ -26,7 +26,7 @@ app.post('/create-draft-order', async (req, res) => {
 
   try {
     const response = await axios.post(
-`https://${SHOP}/admin/api/2024-04/draft_orders.json`
+      `https://${SHOP}/admin/api/2024-04/draft_orders.json`,
       {
         draft_order: {
           line_items: [{
@@ -43,7 +43,7 @@ app.post('/create-draft-order', async (req, res) => {
       }
     );
 
-    // 🧪 Log the full Shopify response to diagnose
+    // 🧪 Log Shopify's response
     console.log('📦 Shopify response:', JSON.stringify(response.data, null, 2));
 
     const draftOrder = response.data.draft_order;
@@ -68,7 +68,7 @@ app.post('/create-draft-order', async (req, res) => {
   }
 });
 
-// ✅ Start the server
+// ✅ Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
