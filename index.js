@@ -1,29 +1,32 @@
+// index.js
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
 
-// Allow your Shopify storefront to talk to this backend
+// Allow only your storefront to call this
 app.use(cors({
   origin: 'https://baknbak.myshopify.com',
   methods: ['POST'],
   allowedHeaders: ['Content-Type']
 }));
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const SHOP = 'baknbak.myshopify.com';
-// This is your **Storefront API** token (from Develop apps → Storefront API scopes)
+// ← This must be your Storefront token (from API credentials → Storefront API)
 const STOREFRONT_TOKEN = process.env.SHOPIFY_STOREFRONT_TOKEN;
 
 app.post('/create-draft-order', async (req, res) => {
   const { variant_id, quantity } = req.body;
   if (!variant_id || !quantity) {
-    return res.status(400).json({ success: false, error: 'variant_id and quantity required' });
+    return res.status(400).json({ success: false, error: 'variant_id & quantity required' });
   }
 
-  const query = `
+  // GraphQL mutation to create a checkout
+  const gql = `
     mutation checkoutCreate($input: CheckoutCreateInput!) {
       checkoutCreate(input: $input) {
         checkout { webUrl }
@@ -31,8 +34,7 @@ app.post('/create-draft-order', async (req, res) => {
       }
     }
   `;
-
-  const variables = {
+  const vars = {
     input: {
       lineItems: [{
         variantId: `gid://shopify/ProductVariant/${variant_id}`,
@@ -42,9 +44,9 @@ app.post('/create-draft-order', async (req, res) => {
   };
 
   try {
-    const graphqlRes = await axios.post(
+    const { data } = await axios.post(
       `https://${SHOP}/api/2025-04/graphql.json`,
-      { query, variables },
+      { query: gql, variables: vars },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -53,15 +55,18 @@ app.post('/create-draft-order', async (req, res) => {
       }
     );
 
-    const body = graphqlRes.data;
-    if (body.errors?.length || body.data.checkoutCreate.userErrors.length) {
-      const errs = (body.errors || body.data.checkoutCreate.userErrors)
+    // If there are any GraphQL or user errors, show them
+    if (data.errors?.length || data.data.checkoutCreate.userErrors.length) {
+      const errs = (data.errors || data.data.checkoutCreate.userErrors)
         .map(e => e.message).join('; ');
       return res.status(500).json({ success: false, error: errs });
     }
 
-    const webUrl = body.data.checkoutCreate.checkout.webUrl;
-    return res.json({ success: true, url: webUrl });
+    // Success! Send back the checkout URL
+    return res.json({
+      success: true,
+      url: data.data.checkoutCreate.checkout.webUrl
+    });
 
   } catch (err) {
     console.error('GraphQL error:', err.response?.data || err.message);
@@ -69,6 +74,4 @@ app.post('/create-draft-order', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Listening on port ${PORT}`));
