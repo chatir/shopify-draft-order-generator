@@ -4,7 +4,6 @@ const cors = require('cors');
 
 const app = express();
 
-// ✅ Allow Shopify to access this backend
 app.use(cors({
   origin: 'https://baknbak.myshopify.com',
   methods: ['POST'],
@@ -14,12 +13,10 @@ app.use(cors({
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
-// ✅ Your Shopify info
 const SHOP = 'baknbak.myshopify.com';
 const ACCESS_TOKEN = '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';
 
-// ✅ Handle POST request from your product page
+// ✅ Create draft order route
 app.post('/create-draft-order', async (req, res) => {
   const { variant_id, quantity } = req.body;
 
@@ -29,15 +26,13 @@ app.post('/create-draft-order', async (req, res) => {
 
   try {
     const response = await axios.post(
-      `https://${SHOP}/admin/api/unstable/draft_orders.json`,
+      `https://${SHOP}/admin/api/2024-04/draft_orders.json`,
       {
         draft_order: {
-          line_items: [
-            {
-              variant_id: parseInt(variant_id),
-              quantity: parseInt(quantity)
-            }
-          ]
+          line_items: [{
+            variant_id: parseInt(variant_id),
+            quantity: parseInt(quantity)
+          }]
         }
       },
       {
@@ -48,22 +43,32 @@ app.post('/create-draft-order', async (req, res) => {
       }
     );
 
-    const draftOrder = response.data.draft_orders?.[0];
+    // 🧪 Log the full Shopify response to diagnose
+    console.log('📦 Shopify response:', JSON.stringify(response.data, null, 2));
+
+    const draftOrder = response.data.draft_order;
     const invoiceUrl = draftOrder?.invoice_url;
 
     if (invoiceUrl) {
       res.json({ success: true, url: invoiceUrl });
     } else {
-      res.status(500).json({ success: false, error: 'Invoice URL not found in response' });
+      res.status(500).json({
+        success: false,
+        error: 'Invoice URL not found in response',
+        shopify_data: response.data
+      });
     }
 
   } catch (error) {
-    console.error('Shopify API Error:', error.response?.data || error.message);
-    res.status(500).json({ success: false, error: 'An error occurred while creating the draft order' });
+    console.error('❌ Shopify API error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data || error.message
+    });
   }
 });
 
-// ✅ Start server
+// ✅ Start the server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
