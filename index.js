@@ -1,8 +1,11 @@
 const express = require('express');
 const axios = require('axios');
-const app = express();
+const cors = require('cors'); // <--- add this
 
-app.use(express.json()); // to parse JSON bodies
+const app = express();
+app.use(cors()); // <--- and this
+app.use(express.json());
+
 
 const PORT = process.env.PORT || 3000;
 
