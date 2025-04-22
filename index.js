@@ -30,7 +30,16 @@ app.post('/create-draft-order', async (req, res) => {
       }
     );
 
-    const invoiceUrl = response.data.draft_order.invoice_url;
+console.log('Shopify response:', response.data); // 👈 Add this
+
+const draftOrder = response.data.draft_order;
+
+if (!draftOrder) {
+  return res.status(500).json({ success: false, error: response.data });
+}
+
+const invoiceUrl = draftOrder.invoice_url;
+res.json({ success: true, url: invoiceUrl });
     res.json({ success: true, url: invoiceUrl });
   } catch (error) {
     console.error(error.response?.data || error.message);
