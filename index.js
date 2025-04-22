@@ -11,13 +11,11 @@ app.use(cors({
   methods: ['POST'],
   allowedHeaders: ['Content-Type']
 }));
-
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-const SHOP = 'baknbak.myshopify.com';
-// ← This must be your Storefront token (from API credentials → Storefront API)
-const STOREFRONT_TOKEN = process.env.SHOPIFY_STOREFRONT_TOKEN;
+const PORT          = process.env.PORT || 3000;
+const SHOP          = 'baknbak.myshopify.com';
+const ACCESS_TOKEN  = process.env.SHOPIFY_API_TOKEN;       // ← Admin API token
 
 app.post('/create-draft-order', async (req, res) => {
   const { variant_id, quantity } = req.body;
@@ -25,16 +23,17 @@ app.post('/create-draft-order', async (req, res) => {
     return res.status(400).json({ success: false, error: 'variant_id & quantity required' });
   }
 
-  // GraphQL mutation to create a checkout
+  // Admin GraphQL mutation to create a draft order
   const gql = `
-    mutation checkoutCreate($input: CheckoutCreateInput!) {
-      checkoutCreate(input: $input) {
-        checkout { webUrl }
+    mutation DraftOrder($input: DraftOrderInput!) {
+      draftOrderCreate(input: $input) {
+        draftOrder { invoiceUrl }
         userErrors { message }
       }
     }
   `;
-  const vars = {
+
+  const variables = {
     input: {
       lineItems: [{
         variantId: `gid://shopify/ProductVariant/${variant_id}`,
@@ -45,31 +44,31 @@ app.post('/create-draft-order', async (req, res) => {
 
   try {
     const { data } = await axios.post(
-      `https://${SHOP}/api/2025-04/graphql.json`,
-      { query: gql, variables: vars },
+      `https://${SHOP}/admin/api/2025-04/graphql.json`,
+      { query: gql, variables },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Storefront-Access-Token': STOREFRONT_TOKEN
+          'X-Shopify-Access-Token': ACCESS_TOKEN,
+          'Content-Type': 'application/json'
         }
       }
     );
 
-    // If there are any GraphQL or user errors, show them
-    if (data.errors?.length || data.data.checkoutCreate.userErrors.length) {
-      const errs = (data.errors || data.data.checkoutCreate.userErrors)
-        .map(e => e.message).join('; ');
-      return res.status(500).json({ success: false, error: errs });
+    // Handle any errors
+    const errs = data.errors || data.data.draftOrderCreate.userErrors;
+    if (errs?.length) {
+      return res.status(500).json({
+        success: false,
+        error: errs.map(e => e.message).join('; ')
+      });
     }
 
-    // Success! Send back the checkout URL
-    return res.json({
-      success: true,
-      url: data.data.checkoutCreate.checkout.webUrl
-    });
+    // Success
+    const url = data.data.draftOrderCreate.draftOrder.invoiceUrl;
+    return res.json({ success: true, url });
 
   } catch (err) {
-    console.error('GraphQL error:', err.response?.data || err.message);
+    console.error('🛑 Admin‑GraphQL error:', err.response?.data || err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
