@@ -1,3 +1,4 @@
+const ACCESS_TOKEN = process.env.SHOPIFY_API_TOKEN?.trim();
 const express = require('express');
 const axios   = require('axios');
 const cors    = require('cors');
