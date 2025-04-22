@@ -1,3 +1,15 @@
+const express = require('express');
+const axios = require('axios');
+const app = express();
+
+app.use(express.json()); // to parse JSON bodies
+
+const PORT = process.env.PORT || 3000;
+
+// Shopify settings
+const SHOP = 'baknbak.myshopify.com';
+const ACCESS_TOKEN = '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';
+
 app.post('/create-draft-order', async (req, res) => {
   const { variant_id, quantity } = req.body;
 
@@ -37,5 +49,8 @@ app.post('/create-draft-order', async (req, res) => {
     console.error('Error from Shopify:', error.response?.data || error.message);
     res.status(500).json({ success: false, error: error.response?.data || error.message });
   }
+});
+app.listen(PORT, () => {
+  console.log(`✅ Server is running on port ${PORT}`);
 });
 
