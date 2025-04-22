@@ -3,19 +3,17 @@ const axios   = require('axios');
 const cors    = require('cors');
 
 const app = express();
-
-// CORS: only allow your store’s domain
-app.use(cors({
-  origin: 'https://baknbak.myshopify.com',
-  methods: ['POST'],
-  allowedHeaders: ['Content-Type']
-}));
-
+app.use(cors({ /* … */ }));
 app.use(express.json());
 
 const PORT        = process.env.PORT || 3000;
-const SHOP_DOMAIN = process.env.SHOPIFY_STORE;       // e.g. "baknbak.myshopify.com"
-const ADMIN_TOKEN = process.env.SHOPIFY_API_TOKEN;   // your shpat_… token
+const SHOP_DOMAIN = process.env.SHOPIFY_STORE;       // MUST be set
+const ADMIN_TOKEN = process.env.SHOPIFY_API_TOKEN;   // MUST be set
+
+// ← DEBUG LOGGING:
+console.log('⚙️ SHOP_DOMAIN:', SHOP_DOMAIN);
+console.log('⚙️ ADMIN_TOKEN:', ADMIN_TOKEN ? ADMIN_TOKEN.slice(0, 10) + '…' : ADMIN_TOKEN);
+
 
 app.post('/create-draft-order', async (req, res) => {
   const { variant_id, quantity } = req.body;
