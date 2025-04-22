@@ -51,10 +51,15 @@ app.post('/create-draft-order', async (req, res) => {
       res.json({ success: false, error: 'Invoice URL not found in response' });
     }
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: 'An error occurred while creating the draft order' });
   }
+  catch (error) {
+  // Log the full error response
+  console.error('Error details:', error.response ? error.response.data : error.message);
+  
+  // Return a generic error message to the user
+  res.status(500).json({ success: false, error: 'An error occurred while creating the draft order' });
+}
+
 });
 
 // Start the server
